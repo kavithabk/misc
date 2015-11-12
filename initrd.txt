@@ -1,0 +1,44 @@
+To Create Ramdisk Image
+
+#To create an (initially empty) initrd use the following steps
+host > dd if=/dev/zero of=initrd bs=1k count=8192 [8M]
+host > mke2fs -vm0 initrd 8192 #Creates ext2 filesystem by default to specify
+specific filesystem use -t option 
+host > tune2fs -c 0 initrd
+host > dd if=initrd bs=1k count=8192 | gzip -v9 > initrd.gz
+To fill empty ramdisk created above with all files needed for ramdisk, mount
+the image and fill it
+host > mkdir mnt
+host > gunzip initrd.gz
+host > mount -o loop initrd mnt/
+host > ... copy stuff you want to have in ramdisk to mnt...
+host > umount mnt
+host > gzip -v9 ramdisk
+mkimage -A arm -T ramdisk -n "my_ramdisk" -d initrd.gz initrd.uboot
+
+
+
+
+
+Changes in u-boot
+
+include/configs/omap4430sdp.h 
+
+#define CONFIG_BOOTARGS "console=ttyO2,115200n8 vram=16M root=/dev/ram
+initrd=0x87000000 rw init=/sbin/init   rootwait omapdss.def_disp=hdmi" 
+
+#define CONFIG_BOOTCOMMAND "mmcinit 0; fatload mmc 0 0x82000000 uImage;
+mmcinit 0 ;fatload mmc 0 0x87000000 initrd.uboot;bootm 0x82000000 0x87000000"
+
+We are loading initrd image from MMC to Memory.We can also use lauterbach.
+
+
+
+
+
+Changes in Kernel Config to support INITRD/INITRAMFS
+
+CONFIG_BLK_DEV_INITRD=y 
+CONFIG_INITRAMFS_SOURCE="PATH is given if using Initramfs" kernel+RFS Image is
+created
+CONFIG_BLK_DEV_RAM_SIZE=4096 --->Increase the size  based on Requirement
